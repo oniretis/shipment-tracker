@@ -1,11 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FlatList, Image, RefreshControl, Text, View } from "react-native";
+import {
+  FlatList,
+  Image,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
 import { icons, images } from "../../constants";
 import { CustomButton, EmptyState, SearchInput } from "../../components";
 import { ShipCard } from "../../components/ShipCard";
 import { Sheet, useSheetRef } from "../../components/Sheet";
+import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
+import { Checked } from "../../components/checked";
 
 const fetchShipments = async () => {
   try {
@@ -33,6 +42,8 @@ const fetchShipments = async () => {
 
 const Home = () => {
   const [shipments, setShipments] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const loadShipments = async () => {
@@ -47,9 +58,6 @@ const Home = () => {
     console.log("Shipments Data:", shipments);
   }, [shipments]);
 
-  const [refreshing, setRefreshing] = useState(false);
-  const bottomSheetModalRef = useSheetRef();
-
   const onRefresh = async () => {
     setRefreshing(true);
     const data = await fetchShipments();
@@ -57,18 +65,45 @@ const Home = () => {
     setRefreshing(false);
   };
 
+  // ref
+  const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+
+  // variables
+  const snapPoints = useMemo(() => ["25%", "50%"], []);
+
+  // callbacks
+  const handlePresentModalPress = useCallback(() => {
+    bottomSheetModalRef.current?.present();
+    setTimeout(() => {
+      setIsOpen(true);
+    }, 100);
+  }, []);
+  const handleSheetChanges = useCallback((index: number) => {
+    console.log("handleSheetChanges", index);
+  }, []);
+
+  const handleCancel = () => {
+    if (bottomSheetModalRef.current) {
+      bottomSheetModalRef.current.dismiss(); // to Close the modal
+    }
+    setIsOpen(false);
+  };
+
   return (
-    <SafeAreaView className="bg-white">
+    <SafeAreaView
+      style={{
+        flex: 1,
+        backgroundColor: isOpen ? "rgba(0, 0, 0, 0.4), zIndex: 9999" : "white",
+      }}
+    >
       <FlatList
         data={shipments}
         keyExtractor={(item) => item.name.toString()}
-        className="bg-white"
         renderItem={({ item }) => (
           <ShipCard
             name={item.name}
             company={item.company}
             destination_zone={item.destination_zone}
-            origin_zone={item.origin_zone}
             destination_state={item.destination_state}
             status={item.status}
             type={item.type}
@@ -124,7 +159,7 @@ const Home = () => {
                 showIcon={true}
                 containerStyles="w-1/2 mr-2  bg-secondary-300 text-primary"
                 textStyles="text-[#A7A3B3]"
-                onPress={() => bottomSheetModalRef.current?.present()}
+                handlePress={handlePresentModalPress}
               />
 
               <CustomButton
@@ -134,14 +169,51 @@ const Home = () => {
                 showIcon={true}
                 containerStyles="w-1/2  bg-secondary text-secondary"
                 textStyles="text-secondary-100"
+                handlePress={() => {}}
               />
             </View>
 
-            <Sheet ref={bottomSheetModalRef} snapPoints={[200]}>
-              <View className="flex-1 items-center justify-center pb-8">
-                <Text className="text">some text</Text>
-              </View>
-            </Sheet>
+            <BottomSheetModal
+              ref={bottomSheetModalRef}
+              index={1}
+              snapPoints={snapPoints}
+              onChange={handleSheetChanges}
+              backgroundStyle={{ borderRadius: 30 }}
+              onDismiss={() => setIsOpen(false)}
+            >
+              <BottomSheetView className="flex-1  items-center px-4">
+                <ScrollView>
+                  <View
+                    style={{
+                      padding: 16,
+                      borderBottomWidth: 2,
+                      borderBottomColor: "#ccc",
+                    }}
+                  >
+                    <View className="flex flex-row justify-between items-center">
+                      <Text
+                        className="text-lg font-pregular text-secondary"
+                        onPress={handleCancel}
+                      >
+                        Cancel
+                      </Text>
+                      <Text className="text-lg font-psemibold text-neutral-800">
+                        Filters
+                      </Text>
+                      <Text
+                        className="text-lg font-pregular text-secondary"
+                        onPress={handleCancel}
+                      >
+                        Done
+                      </Text>
+                    </View>
+                  </View>
+                  <View>
+                    <Checked />
+                  </View>
+                </ScrollView>
+              </BottomSheetView>
+            </BottomSheetModal>
 
             <View className="flex flex-row items-center justify-between mt-8 ">
               <Text className="text-lg font-psemibold ">Shipments</Text>
