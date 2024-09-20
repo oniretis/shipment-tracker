@@ -11,7 +11,7 @@ This is a mobile application built with React Native and Expo. It includes featu
    ```
 3. Start the development server:
    ```
-   npx expo start
+   npx expo start --dev-client
    ```
 
 ## Building the App
